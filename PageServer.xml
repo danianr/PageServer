@@ -1,0 +1,512 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<web-app xmlns="http://java.sun.com/xml/ns/javaee"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+    version="2.5">
+    
+    
+    <!-- SQL statements used by the AccessManager -->
+    <context-param>
+        <param-name>roleMappingSQL</param-name>
+        <param-value>SELECT uni FROM psuserrole WHERE accesslevel = ?</param-value>
+    </context-param>
+    
+    <context-param>
+        <param-name>addUserSQL</param-name>
+        <param-value>INSERT INTO psuserrole (accesslevel, uni) VALUES (?, ?)</param-value>
+    </context-param>
+     
+    <context-param>
+        <param-name>updateRoleSQL</param-name>
+        <param-value>UPDATE psuserrole SET accesslevel = ? WHERE uni = ?</param-value>
+    </context-param>
+ 
+    <context-param>
+        <param-name>removeUserSQL</param-name>
+        <param-value>DELETE FROM psuserrole WHERE uni = ?</param-value>
+    </context-param>
+ 
+ 
+    <!-- Cybersource Information -->
+    <context-param>
+    		<param-name>merchantID</param-name>
+		    <param-value>@MerchantID@</param-value>
+    </context-param>
+
+	<context-param>
+	        <param-name>serialNumber</param-name>
+ 			<param-value>@SerialNumber@</param-value>
+ 	</context-param>		
+ 			
+ 	<context-param>
+ 	     <param-name>sharedSecret</param-name>
+ 	     <param-value>@SharedSecret@</param-value>
+ 	</context-param>
+ 	
+	
+	<context-param>
+	   	  <param-name>transactionEncoding</param-name>
+	   	  <param-value>UTF8</param-value>
+	</context-param>
+
+
+    <!-- Servlet definitions -->	       
+    <servlet>
+        <servlet-name>PageServer</servlet-name>
+        <servlet-class>edu.columbia.cuit.pageServer.PersistenceLayer</servlet-class>
+        <init-param>
+	        <param-name>ldapTimeout</param-name>
+    	    <param-value>60000</param-value>
+        </init-param>
+        <init-param>
+	        <param-name>oracleURL</param-name>
+ 			<param-value>@OracleDescriptor@</param-value>
+        </init-param>
+        <init-param>
+           <param-name>ldapURL</param-name>
+           <param-value>@LdapURL@</param-value>
+        </init-param>
+		<init-param>
+			<param-name>ldapSearchBase</param-name>
+			<param-value>ou=People,o=Columbia University,c=US</param-value>
+		</init-param>
+		<init-param>
+			<param-name>ldapBindDistinguishedName</param-name>
+			<param-value>@LdapBindDN@</param-value>
+		</init-param>
+		<init-param>
+		    <param-name>ldapBindPassword</param-name>
+		    <param-value>@LdapBindPassword@</param-value>
+		</init-param>
+		<init-param>
+		   <param-name>cacheDuration</param-name>
+		   <param-value>18000000</param-value>
+		</init-param>
+		<init-param>
+		     <param-name>overrideRootLogger</param-name>
+		     <param-value>true</param-value>
+		</init-param>
+		<init-param>
+			<param-name>legacyPcdAdapter</param-name>
+			<param-value>edu.columbia.cuit.pageServer.Pcd</param-value>
+		</init-param>
+		<init-param>
+		   <param-name>pcdPort</param-name>
+		   <param-value>7775</param-value>
+		</init-param>
+		<init-param>
+		   <param-name>pcdBacklog</param-name>
+		   <param-value>12</param-value>
+		</init-param>
+		<load-on-startup>0</load-on-startup>
+    </servlet>
+
+	<servlet>
+	   <servlet-name>Purchase</servlet-name>
+	   <servlet-class>edu.columbia.cuit.pageServer.CybersourceGateway</servlet-class>
+	   <init-param>
+	       <param-name>orderPageURI</param-name>
+	       <param-value>https://orderpage.ic3.com/hop/orderform.jsp</param-value>
+	   </init-param>	   
+	   <init-param>
+	       <param-name>testOrderPageURI</param-name>
+	       <param-value>https://orderpagetest.ic3.com/hop/orderform.jsp</param-value>
+	   </init-param>
+	   <init-param>
+	       <param-name>htmlConversionStylesheet</param-name>
+	       <param-value>/cybersource.xslt</param-value>
+	   </init-param>
+	   <init-param>
+	      <param-name>purchaseQuantities</param-name>
+	   	  <param-value>5 10 15 25</param-value>
+	   </init-param>
+	   <init-param>
+	      <param-name>purchaseEnabled</param-name>
+	      <param-value>true</param-value>
+	   </init-param>
+	   <init-param>
+	   	  <param-name>testMode</param-name>
+		  <param-value>@TestMode@</param-value>
+	   </init-param>
+	   <init-param>
+	      <param-name>simpleSigning</param-name>
+	      <param-value>false</param-value>
+	   </init-param>
+	   <load-on-startup>4</load-on-startup>
+	</servlet>
+
+	<servlet>
+		<servlet-name>Query</servlet-name>
+		<servlet-class>edu.columbia.cuit.pageServer.PageQuery</servlet-class>
+		<init-param>
+		<param-name>queryRegexp</param-name>
+		<param-value>.*/([a-z0-9]+-ninja\..+)/([a-z]{2,8}\d{0,6})/(\d+)</param-value>
+		</init-param>
+		<load-on-startup>2</load-on-startup>
+	</servlet>
+
+	<servlet>
+		<servlet-name>Deduct</servlet-name>
+		<servlet-class>edu.columbia.cuit.pageServer.PageDeduct</servlet-class>
+		<init-param>
+		   <param-name>deductRegexp</param-name>
+		   <param-value>.*/([a-z0-9]+-ninja\..+)/([a-z]{2,8}\d{0,6})/(\d+)</param-value>
+		</init-param>
+		<load-on-startup>2</load-on-startup>
+	</servlet>	
+ 
+    <servlet>
+    	<servlet-name>History</servlet-name>
+    	<servlet-class>edu.columbia.cuit.pageServer.UsageReport</servlet-class>
+    	<init-param>
+    	   <param-name>htmlConversionStylesheet</param-name>
+    	   <param-value>/general.xslt</param-value>
+    	</init-param>
+		<load-on-startup>3</load-on-startup>
+    </servlet>
+
+
+    <servlet>
+       <servlet-name>CybersourceReceipt</servlet-name>
+       <servlet-class>edu.columbia.cuit.pageServer.CybersourceReceipt</servlet-class>
+	   <init-param>
+		  <param-name>vendor</param-name>
+	      <param-value>www</param-value>
+	   </init-param>
+	   <init-param>
+	       <param-name>htmlConversionStylesheet</param-name>
+	       <param-value>/cybersource.xslt</param-value>
+	   </init-param>
+	   <load-on-startup>1</load-on-startup>
+    </servlet>
+
+
+
+	<servlet>
+	   <servlet-name>Credit</servlet-name>
+	   <servlet-class>edu.columbia.cuit.pageServer.PageCredit</servlet-class>
+	   <init-param>
+	       <param-name>htmlConversionStylesheet</param-name>
+	       <param-value>/general.xslt</param-value>
+	   </init-param>
+	   <load-on-startup>3</load-on-startup>
+	</servlet>
+	
+	<servlet>
+	    <servlet-name>SellPages</servlet-name>
+		<servlet-class>edu.columbia.cuit.pageServer.PageSale</servlet-class>
+	   <init-param>
+	       <param-name>htmlConversionStylesheet</param-name>
+	       <param-value>/general.xslt</param-value>
+	   </init-param>
+	   <load-on-startup>3</load-on-startup>
+	</servlet>
+
+	<servlet>
+		<servlet-name>UsageReport</servlet-name>
+		<servlet-class>edu.columbia.cuit.pageServer.UsageReport</servlet-class>
+		<init-param>
+		   <param-name>htmlConversionStylesheet</param-name>
+		   <param-value>general.xslt</param-value>
+		</init-param>
+	    <load-on-startup>4</load-on-startup>
+	</servlet>
+
+	<servlet>
+		<servlet-name>AffilDiagnostic</servlet-name>
+		<servlet-class>edu.columbia.cuit.pageServer.AffiliationDiagnostic</servlet-class>
+		<init-param>
+			<param-name>htmlConversionStylesheet</param-name>
+			<param-value>/general.xslt</param-value>
+		</init-param>
+	</servlet>
+
+    <servlet>
+       <servlet-name>SupportInterface</servlet-name>
+       <servlet-class>edu.columbia.cuit.pageServer.SupportGateway</servlet-class>
+       <init-param>
+          <param-name>htmlConversionStylesheet</param-name>
+          <param-value>support.xslt</param-value>
+       </init-param>
+       <load-on-startup>4</load-on-startup>
+    </servlet>
+    
+    <servlet>
+       <servlet-name>AccountInterface</servlet-name>
+       <servlet-class>edu.columbia.cuit.pageServer.AccountManagement</servlet-class>
+       <init-param>
+          <param-name>htmlConversionStylesheet</param-name>
+          <param-value>accounts.xslt</param-value>
+       </init-param>
+    </servlet>
+    
+    <servlet>
+       <servlet-name>BulletinAPI</servlet-name>
+       <servlet-class>edu.columbia.cuit.pageServer.BulletinGateway</servlet-class>
+    </servlet>
+ 
+    
+    
+    <!-- Servlet filter definitions -->
+    <filter>
+    	<filter-name>WindFilter</filter-name>
+    	<filter-class>edu.columbia.cuit.pageServer.WindFilter</filter-class>
+    	<init-param>
+    	  <param-name>AuthenticationURI</param-name>
+    	  <param-value>https://wind.columbia.edu/login?destination=</param-value>
+    	</init-param>
+    	<init-param>
+    	  <param-name>ValidationURI</param-name>
+		  <param-value>https://wind.columbia.edu/validate?ticketid=</param-value>
+    	</init-param>
+    	<init-param>
+    	  <param-name>LogoutURI</param-name>
+		  <param-value>https://wind.columbia.edu/logout?destination=</param-value>
+    	</init-param>
+    	<init-param>
+    	  <param-name>LogoutLandingURI</param-name>
+ 		  <param-value>http://www.columbia.edu/acis/facilities/printers/cc/logout.html</param-value>
+ 		</init-param>
+    	<init-param>
+    	  <param-name>XMLResponse</param-name>
+		  <param-value>true</param-value>
+    	</init-param>
+    	<init-param>
+    	  <param-name>maxSessionLifetime</param-name>
+    	  <param-value>50400000</param-value>
+    	</init-param>
+    </filter>
+    
+    <filter>
+        <filter-name>RegisteredClientFilter</filter-name>
+        <filter-class>edu.columbia.cuit.pageServer.RegisteredClientFilter</filter-class>
+        <init-param>
+           <param-name>AllowClientCertAuth</param-name>
+           <param-value>False</param-value>
+        </init-param>
+        <init-param>
+           <param-name>AllowIpBasedAuth</param-name>
+           <param-value>True</param-value>
+        </init-param>
+    </filter>
+    
+    <filter>
+        <filter-name>AdminFilter</filter-name>
+        <filter-class>edu.columbia.cuit.pageServer.AccessLevelFilter</filter-class>
+		<init-param>
+		   <param-name>AccessLevel</param-name>
+		   <param-value>ADMIN</param-value>
+		</init-param>
+    </filter>
+
+    <filter>
+        <filter-name>ManagerFilter</filter-name>
+        <filter-class>edu.columbia.cuit.pageServer.AccessLevelFilter</filter-class>
+		<init-param>
+		   <param-name>AccessLevel</param-name>
+		   <param-value>MANAGER</param-value>
+		</init-param>
+    </filter>
+
+    <filter>
+        <filter-name>SupportFilter</filter-name>
+        <filter-class>edu.columbia.cuit.pageServer.AccessLevelFilter</filter-class>
+		<init-param>
+		   <param-name>AccessLevel</param-name>
+		   <param-value>CREDIT</param-value>
+		</init-param>
+    </filter>
+
+    
+    <!-- Servlet filter mappings -->
+    <filter-mapping>
+    	<filter-name>WindFilter</filter-name>
+    	<servlet-name>Purchase</servlet-name>
+		<servlet-name>History</servlet-name>
+		<servlet-name>Credit</servlet-name>
+		<servlet-name>SellPages</servlet-name>
+		<servlet-name>UsageReport</servlet-name>
+		<servlet-name>PageServer</servlet-name>
+		<servlet-name>AffilDiagnostic</servlet-name>
+		<servlet-name>SupportInterface</servlet-name>
+		<servlet-name>AccountInterface</servlet-name>
+    </filter-mapping>
+
+	<filter-mapping>
+	    <filter-name>RegisteredClientFilter</filter-name>
+	    <servlet-name>Query</servlet-name>
+	    <servlet-name>Deduct</servlet-name>
+		<servlet-name>BulletinAPI</servlet-name>
+	</filter-mapping>
+
+    <filter-mapping>
+        <filter-name>AdminFilter</filter-name>
+        <servlet-name>PageServer</servlet-name>
+    </filter-mapping>
+    
+    <filter-mapping>
+        <filter-name>SupportFilter</filter-name>
+        <servlet-name>SupportInterface</servlet-name>
+        <servlet-name>AffilDiagnostic</servlet-name>
+		<servlet-name>Credit</servlet-name>
+		<servlet-name>SellPages</servlet-name>
+    </filter-mapping>
+    
+    <filter-mapping>
+        <filter-name>ManagerFilter</filter-name>
+        <servlet-name>AccountInterface</servlet-name>
+    </filter-mapping>
+    
+
+    <!-- Session configuration -->
+    <session-config>
+        <session-timeout>600</session-timeout>
+    </session-config>
+
+    <!--  URL mappings and associated context-parms to
+      advertise context paths to other servlets running
+      within the same context.
+       -->
+       
+    <servlet-mapping>
+    	<servlet-name>UsageReport</servlet-name>
+		<url-pattern>/quota</url-pattern>
+    </servlet-mapping>
+    
+    <context-param>
+        <param-name>usageResource</param-name>
+		<param-value>/quota</param-value>
+    </context-param>
+       
+       
+    <servlet-mapping>
+        <servlet-name>Purchase</servlet-name>
+	    <url-pattern>/index.html</url-pattern>
+		<url-pattern>/purchase</url-pattern>
+    </servlet-mapping>
+
+
+	<context-param>
+		<param-name>purchaseResource</param-name>
+		<param-value>/purchase</param-value>
+	</context-param>
+
+
+    <servlet-mapping>
+         <servlet-name>CybersourceReceipt</servlet-name>
+         <url-pattern>/cybersourceReceipt</url-pattern>
+    </servlet-mapping>
+	
+	<context-param>
+		  <param-name>receiptResource</param-name>
+		  <param-value>/cybersourceReceipt</param-value>
+	</context-param>
+
+
+	<servlet-mapping>
+		<servlet-name>Query</servlet-name>
+		<url-pattern>/query/*</url-pattern>
+	</servlet-mapping>
+
+	<context-param>
+		<param-name>queryResource</param-name>
+		<param-value>/query</param-value>
+	</context-param>
+
+
+	<servlet-mapping>
+		<servlet-name>Deduct</servlet-name>
+		<url-pattern>/deduct/*</url-pattern>
+	</servlet-mapping>
+
+	<context-param>
+		<param-name>deductResource</param-name>
+		<param-value>/deduct</param-value>
+	</context-param>
+	
+
+	<servlet-mapping>
+	    <servlet-name>Credit</servlet-name>
+	    <url-pattern>/credit/*</url-pattern>
+	</servlet-mapping>
+
+	<context-param>
+		<param-name>creditResource</param-name>
+		<param-value>/credit</param-value>
+	</context-param>
+
+	<servlet-mapping>
+		<servlet-name>SellPages</servlet-name>
+		<url-pattern>/sell/*</url-pattern>
+	</servlet-mapping>
+
+	<context-param>
+		<param-name>sellResource</param-name>
+		<param-value>/sell</param-value>
+	</context-param>
+	
+	<servlet-mapping>
+	    <servlet-name>AffilDiagnostic</servlet-name>
+	    <url-pattern>/affils/*</url-pattern>
+	</servlet-mapping>
+
+    <context-param>
+        <param-name>affilsResource</param-name>
+        <param-value>/affils</param-value>
+    </context-param>
+
+
+	<servlet-mapping>
+		<servlet-name>History</servlet-name>
+		<url-pattern>/history/*</url-pattern>
+	</servlet-mapping>
+    
+	<context-param>
+	      <param-name>historyResource</param-name>
+	      <param-value>/history</param-value>
+	 </context-param>
+
+
+    <servlet-mapping>
+        <servlet-name>SupportInterface</servlet-name>
+        <url-pattern>/support</url-pattern>
+    </servlet-mapping>
+
+	<context-param>
+		  <param-name>supportResource</param-name>
+		  <param-value>/support</param-value>
+	</context-param>
+
+
+    <servlet-mapping>
+        <servlet-name>AccountInterface</servlet-name>
+        <url-pattern>/accounts</url-pattern>
+    </servlet-mapping>
+    
+	<context-param>
+	   <param-name>accountResource</param-name>
+	   <param-value>/accounts</param-value>
+	</context-param>
+
+
+    <servlet-mapping>
+        <servlet-name>PageServer</servlet-name>
+        <url-pattern>/monitoring</url-pattern>
+    </servlet-mapping>
+
+	<context-param>
+		<param-name>monitoringResource</param-name>
+		<param-value>/monitoring</param-value>
+	</context-param>
+
+    <servlet-mapping>
+        <servlet-name>BulletinAPI</servlet-name>
+        <url-pattern>/bulletin</url-pattern>
+    </servlet-mapping>
+
+    <context-param>
+        <param-name>bulletinResource</param-name>
+        <param-value>/bulletin</param-value>
+    </context-param>
+
+</web-app>

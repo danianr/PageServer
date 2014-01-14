@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?> <!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+ <renderer renderedClass="edu.columbia.cuit.pageServer.AffiliationEntry"
+  renderingClass="edu.columbia.cuit.pageServer.AffiliationEntryRenderer" />
+  
+ <renderer renderedClass="edu.columbia.cuit.pageServer.AffiliationCache"
+  renderingClass="edu.columbia.cuit.pageServer.AffiliationCacheRenderer" />
+ 
+<renderer renderedClass="edu.columbia.cuit.pageServer.Bulletin"
+  renderingClass="edu.columbia.cuit.pageServer.BulletinRenderer" />
+
+ <renderer renderedClass="javax.servlet.ServletRequest"
+  renderingClass="edu.columbia.cuit.pageServer.ServletRequestRenderer" />
+
+ <renderer renderedClass="javax.servlet.http.HttpSession"
+  renderingClass="edu.columbia.cuit.pageServer.SessionIdRenderer" />
+
+<renderer renderedClass="org.w3c.dom.Document"
+  renderingClass="edu.columbia.cuit.pageServer.DOMRenderer" />
+  
+
+ <appender name="A1" class="org.apache.log4j.ConsoleAppender">
+ 	<layout class="org.apache.log4j.PatternLayout"> 
+ 		<param name="ConversionPattern" value="%d{ISO8601} %-5p %c{1} [%t]: %m%n"/>
+ 	</layout>
+ </appender>
+ 
+ <appender name="MAIN" class="org.apache.log4j.RollingFileAppender">
+   <param name="File" value="${catalina.base}/logs/PageServer.log"/>
+   <param name="Append" value="true"/>
+   <param name="MaxFileSize" value="25000KB"/>
+   <param name="MaxBackupIndex" value="10"/>
+   <param name="Encoding" value="UTF-8"/>
+   <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{ISO8601} %-5p [%t]: %m%n"/>
+   </layout>
+ </appender>
+ 
+ <appender name="TRANSACT" class="org.apache.log4j.RollingFileAppender">
+   <param name="File" value="${catalina.base}/logs/transact.log"/>
+   <param name="Append" value="false"/>
+   <param name="MaxFileSize" value="5000KB"/>
+   <param name="MaxBackupIndex" value="10"/>
+   <param name="Encoding" value="UTF-8"/>
+   <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{ISO8601} %m%n"/>
+   </layout>
+ </appender>
+ 
+ <appender name="QUERYLOG" class="org.apache.log4j.RollingFileAppender">
+   <param name="File" value="${catalina.base}/logs/query.log"/>
+   <param name="Append" value="true"/>
+   <param name="MaxFileSize" value="5000KB"/>
+   <param name="MaxBackupIndex" value="3"/>
+   <param name="Encoding" value="UTF-8"/>
+   <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{ISO8601} %m%n"/>
+   </layout>
+ </appender>
+ 
+ <appender name="RECEIPTS" class="org.apache.log4j.RollingFileAppender">
+   <param name="File" value="${catalina.base}/logs/receipts.log"/>
+   <param name="Append" value="true"/>
+   <param name="MaxFileSize" value="5000KB"/>
+   <param name="MaxBackupIndex" value="10"/>
+   <param name="Encoding" value="UTF-8"/>
+   <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{ISO8601} %m%n"/>
+   </layout>
+ </appender>
+
+<appender name="DENY" class="org.apache.log4j.RollingFileAppender">
+   <param name="File" value="${catalina.base}/logs/deny.log"/>
+   <param name="Append" value="true"/>
+   <param name="MaxFileSize" value="5000KB"/>
+   <param name="MaxBackupIndex" value="3"/>
+   <param name="Encoding" value="UTF-8"/>
+   <layout class="org.apache.log4j.PatternLayout">
+      <param name="ConversionPattern" value="%d{ISO8601} %m%n"/>
+   </layout>
+</appender> 
+
+
+ <logger name="edu.columbia.cuit.PageServer" additivity="true">
+   <level value="trace"/>
+   <appender-ref ref="MAIN"/>
+ </logger>
+
+ <logger name="edu.columbia.cuit.PageServer.deny" additivity="true">
+    <level value="trace"/>
+    <appender-ref ref="DENY"/>
+ </logger>
+
+ <logger name="edu.columbia.cuit.PageServer.receipts" additivity="true">
+    <level value="trace"/>
+    <appender-ref ref="RECEIPTS"/>
+ </logger>
+
+ <logger name="edu.columbia.cuit.PageServer.transaction" additivity="true">
+    <level value="trace"/>
+    <appender-ref ref="TRANSACT"/>
+ </logger>
+
+ <logger name="edu.columbia.cuit.PageServer.querylog" additivity="false">
+    <level value="trace"/>
+    <appender-ref ref="QUERYLOG"/>
+ </logger>
+ 
+ </log4j:configuration>

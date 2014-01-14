@@ -1,0 +1,222 @@
+<?xml version="1.0"?>
+
+<project name="PageServer" default="prod" basedir="./">
+
+<property name="src.dir" value="./"/>
+
+<property name="deployment.dir" value="${user.home}/deployment"/>
+<property name="build.dir"      value="${user.home}/build/PageServer"/>
+<property name="build.tests"	value="${user.home}/testing"/>	
+<property name="build.lib"      value="${build.dir}/WEB-INF/lib"/>
+<property name="build.classes"  value="${build.dir}/WEB-INF/classes"/>
+
+<property name="javart.dir" value="/usr/bin"/>
+<property name="lib.dir"    value=" /usr/lib/jvm/sun-jdk-1.6/jre/lib"/>
+<property name="ext.dir"    value="${lib.dir}/Home/lib/ext"/>
+
+
+<path id="apple.path">
+	<pathelement location="${lib.dir}/classes.jar"/>
+	<pathelement location="${lib.dir}/ui.jar"/>
+	<pathelement location="${lib.dir}/laf.jar"/>
+	<pathelement location="${lib.dir}/jsse.jar"/>
+	<pathelement location="${lib.dir}/jce.jar"/>
+	<pathelement location="${lib.dir}/charsets.jar"/>
+	<pathelement location="${ext.dir}/apple_provider.jar"/>
+	<pathelement location="${ext.dir}/dnsns.jar"/>
+	<pathelement location="${ext.dir}/localedata.jar"/>
+	<pathelement location="${ext.dir}/sunjce_provider.jar"/>
+	<pathelement location="${ext.dir}/sunpkcs11.jar"/>
+	<pathelement location="${user.home}/lib/servlet-api.jar"/>
+	<pathelement location="/usr/local/tomcat/lib/servlet-api.jar"/>
+
+	<filelist id="apple.jldap"        dir="${user.home}/lib" files="ldap.jar" />
+	<filelist id="apple.jldapDebug"   dir="${user.home}/git/openldap-jldap/lib_debug" files="ldap.jar"/>
+	<filelist id="apple.commonsCodec" dir="${user.home}/lib" files="commons-codec.jar" />
+	<filelist id="apple.log4j"        dir="${user.home}/lib" files="log4j.jar" />
+	<filelist id="apple.jdbc"         dir="${user.home}/lib" files="ojdbc6.jar,orai18n.jar" /> 
+</path>	
+
+	
+<path id="gentoo.path">
+	<pathelement location="${lib.dir}/classes.jar"/>
+	<pathelement location="${lib.dir}/ui.jar"/>
+	<pathelement location="${lib.dir}/laf.jar"/>
+	<pathelement location="${lib.dir}/jsse.jar"/>
+	<pathelement location="${lib.dir}/jce.jar"/>
+	<pathelement location="${lib.dir}/charsets.jar"/>
+	<pathelement location="${ext.dir}/dnsns.jar"/>
+	<pathelement location="${ext.dir}/localedata.jar"/>
+	<pathelement location="${ext.dir}/sunjce_provider.jar"/>
+	<pathelement location="${ext.dir}/sunpkcs11.jar"/>
+	<pathelement location="/usr/share/tomcat-servlet-api-2.5/lib/servlet-api.jar"/>
+
+	<filelist id="gentoo.jldap"        dir="/usr/share/jldap/lib" files="ldap.jar"/>
+	<filelist id="gentoo.jldapDebug"   dir="/usr/share/jdlap/lib_debug" files="ldap.jar"/>
+	<filelist id="gentoo.commonsCodec" dir="/usr/share/commons-codec/lib" files="commons-codec.jar" />
+	<filelist id="gentoo.log4j"        dir="/usr/share/log4j/lib" files="log4j.jar" />
+	<filelist id="gentoo.jdbc"         dir="${user.home}/jdbc" files="ojdbc6.jar,orai18n.jar" /> 
+</path>	
+
+<path id="junit.path">
+	<pathelement location="${build.classes}"/>
+	<pathelement location="/Users/dr2481/junit/junit-4.11.jar"/>
+	<pathelement location="/Users/dr2481/junit/hamcrest-core-1.3.jar"/>
+	<filelist id="apple.commonsCodec" dir="${user.home}/lib" files="commons-codec.jar" />
+</path>
+	
+<patternset id="webapps">
+	<include name="**/PersistenceLayer.java"/>
+	<include name="**/Pagecontrol.java" />
+	<include name="**/OraclePagecontrolDriver.java" />
+	<include name="**/PageQuery.java"/>
+	<include name="**/PageDeduct.java"/>
+	<include name="**/PageCredit.java"/>
+	<include name="**/PageSale.java"/>
+	<include name="**/PageHistory.java"/>
+	<include name="**/CybersourceGateway.java"/>
+	<include name="**/SupportGateway.java"/>
+	<include name="**/CybersourceReceipt.java"/>
+	<include name="**/UsageReport.java"/>
+	<include name="**/AffiliationEntry.java"/>
+	<include name="**/AffiliationCache.java"/>
+	<include name="**/AffiliationModule.java" />
+	<include name="**/LDAPAffiliationModule.java" />	
+	<include name="**/LDAPUserinfo.java" />	
+	<include name="**/AffiliationDiagnostic.java"/>
+	<include name="**/AffiliationException.java"/>
+	<include name="**/Pcd.java"/>
+	<include name="**/PcdRequest.java"/>
+	<include name="**/Pagecontrol.java"/>
+	<include name="**/AccessManager.java"/>
+	<include name="**/AccountManagement.java"/>
+	<include name="**/MaintenanceScheduler.java"/>
+	<include name="**/MaintenanceTask.java"/>
+	<include name="**/AcademicYear.java"/>
+	<include name="**/Semester.java"/>
+	<include name="**/Bulletin.java"/>
+	<include name="**/BulletinBoard.java"/>
+	<include name="**/BulletinGateway.java"/>
+</patternset>
+
+<patternset id="maintenance">
+	<include name="**/maintenance/*.java"/>
+</patternset>
+	
+<patternset id="filters">
+	<include name="**/WindFilter.java"/>
+	<include name="**/AccessLevelFilter.java"/>
+	<include name="**/RegisteredClientFilter.java"/>
+</patternset>
+
+<patternset id="logging">
+	<include name="**/AffiliationEntryRenderer.java"/>
+	<include name="**/AffiliationCacheRenderer.java"/>
+	<include name="**/BulletinRenderer.java"/>
+	<include name="**/ServletRequestRenderer.java"/>
+	<include name="**/SessionIdRenderer.java"/>
+	<include name="**/DOMRenderer.java"/>
+</patternset>	
+
+<patternset id="tests">
+	<include name="**/*Test.java"/>
+</patternset>
+	
+<target name="prepare">
+	<mkdir dir="${build.dir}"/>
+	<mkdir dir="${build.classes}"/>
+	<mkdir dir="${build.lib}"/>
+	<mkdir dir="${deployment.dir}"/>
+</target>
+	
+<target name="clean">
+	<delete>
+		<fileset dir="${build.classes}"/>
+		<fileset dir="${build.lib}"/>
+	    <fileset dir="${build.dir}"/>
+		<fileset dir="${deployment.dir}" excludes="."/>
+		<fileset dir="${build.dir}/.." includes="PageServer-*.xml"/>
+		<fileset dir="${build.tests}"/>
+	</delete>
+</target>
+	
+<target name="prod">
+	<antcall target="war">
+		<param name="distro" value="prod"/>
+	</antcall>
+</target>
+
+<target name="dev">
+	<antcall target="war">
+		<param name="distro" value="dev"/>
+	</antcall>
+</target>
+	
+	
+<target name="war" depends="compile">	
+
+	<echo message="Building ${distro} distribution"/>
+	
+	<sequential>
+
+		<delete file="${build.dir}/../PageServer-${distro}.xml"/>
+		<copy file="${src.dir}/PageServer.xml" tofile="${build.dir}/../PageServer-${distro}.xml"/>
+	
+		<replace file="${build.dir}/../PageServer-${distro}.xml" propertyFile="${src.dir}/secure.properties">
+			<replacefilter token="@OracleDescriptor@" property="${distro}.oracleDescriptor"/>
+			<replacefilter token="@LdapURL@" property="${distro}.ldapURL"/>
+			<replacefilter token="@LdapBindDN@" property="${distro}.ldapBindDN"/>
+			<replacefilter token="@LdapBindPassword@" property="${distro}.ldapBindPassword"/>
+			<replacefilter token="@MerchantID@" property="${distro}.merchantID" />
+			<replacefilter token="@SerialNumber@" property="${distro}.serialNumber" />
+			<replacefilter token="@SharedSecret@" property="${distro}.sharedSecret"/>
+			<replacefilter token="@TestMode@" property="${distro}.testMode"/>
+		</replace>
+		
+		
+		<mkdir dir="${deployment.dir}/${distro}"/>
+		<war warfile="${deployment.dir}/${distro}/PageServer.war" webxml="${build.dir}/../PageServer-${distro}.xml">
+			<fileset dir="${src.dir}" includes="*.jsp,*.xslt,scheduler.properties"/>
+			<classes dir="${build.classes}" includes="**/*.class,**/log4j.xml"/>
+	   		<lib dir="${build.lib}" includes="**/*.jar"/>
+		</war>	
+		
+	</sequential>	
+		
+</target>
+
+	
+<target name="junitCompile" depends="dev">
+	<mkdir dir="${build.tests}"/>
+	
+	<javac destdir="${build.tests}" srcdir="${src.dir}/tests" classpathref="junit.path" includeantruntime="false">
+	    <patternset refid="tests"/>
+	</javac>
+
+</target>
+	
+	
+<target name="compile" depends="prepare">
+	
+	<copy todir="${build.lib}">
+	    <filelist refid="apple.jldapDebug"/>
+		<filelist refid="apple.commonsCodec"/>
+		<filelist refid="apple.jdbc"/>
+		<filelist refid="apple.log4j"/>
+	</copy>
+
+	<copy todir="${build.classes}">
+		<fileset dir="${src.dir}" includes="log4j.xml"/>
+	</copy>
+	
+	
+	<javac destdir="${build.classes}" srcdir="edu/columbia/cuit/pageServer" includeantruntime="false">
+	    <patternset refid="webapps"/>
+		<patternset refid="maintenance"/>
+		<patternset refid="filters"/>
+		<patternset refid="logging"/>
+	    <classpath refid="apple.path"/>
+	</javac>	
+</target>
+	
+</project>
