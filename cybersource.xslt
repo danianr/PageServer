@@ -293,13 +293,28 @@ Columbia." />
    
    
    
-   
-   <xsl:when test="confirmPurchase">
+   <xsl:when test="unsignedForm">
+         <xsl:variable name="targetURL"><xsl:value-of select="unsignedForm/targetURL/@href" disable-output-escaping = "yes"/></xsl:variable>
 
-		  You are about to be redirected to our third-party payment card processor.
-		  All purchases of printing dollars are final and non-refundable.  Please click
-		  on the "Continue Purchase" button below to proceed to the checkout.
-             
+		 You are about to purchase $<xsl:value-of select="unsignedForm/purchaseAmount/@value"/> of printing dollars.<br/><br/>
+
+         <form id="payment_form" method="post" style="margin 15px 2px; padding 5px" action="{$targetURL}">
+            Please review the billing address information which you previously entered.<br/>
+            If any of this information is not correct, please return to the previous page<p/>
+            
+			<xsl:apply-templates select="/descendant::formfields/field"/>
+			<a href="javascript:history.back()">Go Back</a><xsl:text>  </xsl:text>
+		    <input type="submit" id="submit" name="submit" value="Submit"/>
+         </form>
+   </xsl:when>
+
+   
+   <xsl:when test="signedForm">
+
+		  Please enter your billing address information below. Once entered, you will be
+		  taken to a separate page to enter your credit card information which will be sent directly
+		  to our Payment Card provider via SSL.
+	             
           <xsl:variable name="targetURL"><xsl:value-of select="confirmPurchase/targetURL/@href" disable-output-escaping = "yes"/></xsl:variable>          
           <form method="post" style="margin: 15px 2px; padding: 5px" action="{$targetURL}">
 
@@ -308,6 +323,7 @@ Columbia." />
 
  <xsl:variable name="logoutURL"><xsl:value-of select="confirmPurchase/logoutURL/@href" disable-output-escaping = "yes"/></xsl:variable>
 
+                        <a href="javascript:history.back()">Go Back</a><xsl:text>  </xsl:text>
  <input type="submit" onclick="MM_goToURL('parent','{$logoutURL}');return document.MM_returnValue" value="Logout"/>
                         <script language="JavaScript" type="text/JavaScript">
                         function MM_goToURL() { //v3.0
@@ -319,7 +335,6 @@ Columbia." />
                         <input type="submit" value="Continue Purchase"/>
                     </form>
 				
-
    </xsl:when>
    
    
@@ -341,11 +356,11 @@ Columbia." />
                Your credit card was charged once for order number #<xsl:value-of select="$TransactionId"/>.<br/>
             </xsl:when>
          
-            <xsl:when test="$ResponseCode=1">
+            <xsl:when test="$ResponseCode='100'">
               <img src="http://www.columbia.edu/acis/facilities/images/confirm.gif" alt="cc"/><br/><br/>
               <strong> <xsl:value-of select="$ReasonText"/> </strong><br/>
               Your <xsl:value-of select="$CustomerId"/> account has been credited.<br/>
-              Your order number is <strong>#<value-of select="$InvoiceNum"/></strong>.
+              Your order number is <strong>#<xsl:value-of select="$TransactionId"/></strong>.
             </xsl:when>
         
             <xsl:otherwise>
@@ -359,9 +374,6 @@ Columbia." />
 
         <tr><td>
          <xsl:variable name="ContinueURL"><xsl:value-of select="./purchaseReceipt/continueURL/@href"/></xsl:variable>
-         <xsl:if test="$ResponseCode!=1">
-            <a href="javascript:history.back()">Go Back</a><xsl:text>  </xsl:text>
-         </xsl:if>
             <a href="{$ContinueURL}">Continue</a>
         </td></tr>
 
@@ -501,8 +513,33 @@ March 17, 2005
 <xsl:template match = "field">
     <xsl:variable name="fieldName"><xsl:value-of select="./@name" /></xsl:variable>
     <xsl:variable name="fieldValue"><xsl:value-of select="./@value" /></xsl:variable>    
-    <input type="hidden" name="{$fieldName}" value="{$fieldValue}" />
+	<xsl:choose>
+	   <xsl:when test="./@hidden">
+	      <input type="hidden" name="{$fieldName}" value="{$fieldValue}" />
+	   </xsl:when>
+	   
+	   <xsl:when test="./@displayOnly">
+	      <span><xsl:value-of select="@pre" disable-output-escaping="yes" />
+	      <input type="text" readonly="true" name="{$fieldName}" value="{$fieldValue}" /></span>
+		  <xsl:value-of select="@post" disable-output-escaping="yes" />
+	   </xsl:when>
 
+	   <xsl:when test="@name = 'card_type'" >
+	      <select name="{$fieldName}" size="1" >
+	         <option value="001" >Visa</option>
+	         <option value="002" selected="true" >MasterCard</option>
+			 <option value="003" >American Express</option>
+			 <option value="004" >Discover</option>
+		  </select>
+	   </xsl:when>
+	   
+	   <xsl:otherwise>
+	      <span><xsl:value-of select="@pre" disable-output-escaping="yes" />
+	      <input type="text" name="{$fieldName}" value="{$fieldValue}" /></span>
+		  <xsl:value-of select="@post" disable-output-escaping="yes" />
+	   </xsl:otherwise>
+	   
+	</xsl:choose>
 </xsl:template>
 
 </xsl:stylesheet>

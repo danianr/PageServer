@@ -54,8 +54,8 @@ public class LDAPUserinfo {
 		StringBuffer searchFilter = new StringBuffer("(uni=)");
 		searchFilter.insert(5, username);
 		
-		String[] requestedAttributes = new String[]{ "uni", "cn", "title", "ou", "mail" };
-		HashMap<String,String> userinfo = new HashMap<String, String>(4);
+		String[] requestedAttributes = new String[]{ "uni", "cn", "title", "ou", "mail", "givenName", "sn" };
+		HashMap<String,String> userinfo = new HashMap<String, String>(7);
 		
 		LDAPConnection conn = null;
 		try {

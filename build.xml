@@ -74,9 +74,10 @@
 	<include name="**/PageCredit.java"/>
 	<include name="**/PageSale.java"/>
 	<include name="**/PageHistory.java"/>
-	<include name="**/CybersourceGateway.java"/>
-	<include name="**/SupportGateway.java"/>
+	<include name="**/CybersourceDigest.java"/>
+	<include name="**/CybersourceSecureAssurance.java"/>
 	<include name="**/CybersourceReceipt.java"/>
+	<include name="**/SupportGateway.java"/>
 	<include name="**/UsageReport.java"/>
 	<include name="**/AffiliationEntry.java"/>
 	<include name="**/AffiliationCache.java"/>
@@ -107,6 +108,7 @@
 	<include name="**/WindFilter.java"/>
 	<include name="**/AccessLevelFilter.java"/>
 	<include name="**/RegisteredClientFilter.java"/>
+	<include name="**/TestFilter.java"/>
 </patternset>
 
 <patternset id="logging">
@@ -167,10 +169,10 @@
 			<replacefilter token="@LdapURL@" property="${distro}.ldapURL"/>
 			<replacefilter token="@LdapBindDN@" property="${distro}.ldapBindDN"/>
 			<replacefilter token="@LdapBindPassword@" property="${distro}.ldapBindPassword"/>
-			<replacefilter token="@MerchantID@" property="${distro}.merchantID" />
-			<replacefilter token="@SerialNumber@" property="${distro}.serialNumber" />
+			<replacefilter token="@ProfileId@" property="${distro}.profileId" />
+			<replacefilter token="@AccessKey@" property="${distro}.accessKey" />
 			<replacefilter token="@SharedSecret@" property="${distro}.sharedSecret"/>
-			<replacefilter token="@TestMode@" property="${distro}.testMode"/>
+			<replacefilter token="@TransactionEndpoint@" property="${distro}.endpoint"/>			
 		</replace>
 		
 		

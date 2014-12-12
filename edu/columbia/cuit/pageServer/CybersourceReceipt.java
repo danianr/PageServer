@@ -4,19 +4,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.HashMap;
 import java.util.StringTokenizer;
-
-import javax.crypto.Mac;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServlet;
@@ -36,7 +28,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.log4j.Logger;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -55,17 +46,15 @@ public class CybersourceReceipt extends HttpServlet {
 	private static final String vendor = "www";
 	private static final int dollarConvertValue = 100;
 
-	private SecretKey secretKey;
-	private String transactionEncoding;
 	private Pagecontrol pagecontrol;
 	private DocumentBuilderFactory builderFactory;
 	private Templates htmlConversion;
 	
-	private static String merchantID;
-	private static String sharedSecret;
-	private static String serialNumber;
-	private static final String macAlgorithm = "HmacSha1";
-
+	private CybersourceDigest signer;
+	
+	private static String accessKey;
+	private static String profileId;
+	private static String transactionEncoding;
 	
 	public void init(){
 		log.debug("Initializing " + getServletName());
@@ -73,9 +62,8 @@ public class CybersourceReceipt extends HttpServlet {
 		ServletConfig config = getServletConfig();
 		ServletContext context = config.getServletContext();
 		
-		merchantID       = context.getInitParameter("merchantID");
-		sharedSecret     = context.getInitParameter("sharedSecret");
-		serialNumber     = context.getInitParameter("serialNumber");
+		accessKey       = context.getInitParameter("accessKey");
+		profileId		= context.getInitParameter("profileId");
 		
 		try {
 			builderFactory = DocumentBuilderFactory.newInstance();
@@ -96,84 +84,47 @@ public class CybersourceReceipt extends HttpServlet {
 		transactionEncoding = context.getInitParameter("transactionEncoding");
 		if (transactionEncoding == null) transactionEncoding = Charset.defaultCharset().name();
 		log.trace("Using characterSet \"" + transactionEncoding + "\" for transactionEncoding");
+				
 		
-		
-		// Setup the SecretKey used for the message digesting
-		sharedSecret = context.getInitParameter("sharedSecret");
-		log.trace("sharedSecret = \"" + sharedSecret + "\"");		
-		log.trace("macAlgorithm = \"" + macAlgorithm + "\"");
-			
 		try {
-			secretKey = new SecretKeySpec(sharedSecret.getBytes(transactionEncoding), macAlgorithm);
-		} catch (UnsupportedEncodingException e) {
-			log.error("Unsupported characterSet for transactionEncoding, using default");
-			secretKey = new SecretKeySpec(sharedSecret.getBytes(), macAlgorithm);
-			transactionEncoding = Charset.defaultCharset().name();
+			signer = new CybersourceDigest(context.getInitParameter("sharedSecret"));
+		}catch(UnsupportedEncodingException e){
+			log.fatal("Unsupported characterSet for transactionEncoding");
+		}catch(NullPointerException e){
+			log.fatal("Caught a NullPointerException creating a signer, is sharedSecret set?");
 		}
-		
-		if (secretKey == null) log.error("Unable to initialize SecretKeySpec, check macAlgorithm");
-		
 		
 		log.info("Done with " + getServletName() + " init");
 	}
 	
 	
-	// Identical to the function in CybersourceGateway (has to be)
-	public String getPublicDigest(String message) throws InvalidKeyException,NoSuchAlgorithmException,
-														UnsupportedEncodingException, IllegalStateException{
-		
-		// Constructor options for better agreement with the internal Sun Base64Encoder
-		final byte[] lineSep = { '\n' };
-		Base64 commonsCodec = new Base64(76, lineSep, false);
-
-
-		// MAC objects are not thread-safe, so create a new one each time
-		Mac mac = Mac.getInstance(macAlgorithm);
-		mac.init(secretKey);		    
-		byte[] digestedBytes;
-		try {
-			digestedBytes = mac.doFinal(message.getBytes(transactionEncoding));
-		} catch (IllegalStateException e) {
-			log.warn(e);
-			// try to reset the MAC, otherwise let the error bubble up
-			mac.reset();
-			digestedBytes = mac.doFinal(message.getBytes(transactionEncoding));
-		}
-
-		// Encode as BASE64 and remove all newlines
-		String publicDigest = commonsCodec.encodeToString(digestedBytes);    
-		return publicDigest.replaceAll("\n", "");
-	}
-
-	
 	
     public boolean verifyTransactionSignature(HttpServletRequest req) {
-  		    
-		String transactionSignature = req.getParameter("signedDataPublicSignature");
-		if (transactionSignature == null) return false;
-		    
-		String transactionSignatureFields = req.getParameter("signedFields");
-		if (transactionSignatureFields == null) return false;
-		
-		StringTokenizer tokenizer = new StringTokenizer(transactionSignatureFields, ",", false);
-		
-		StringBuffer data = new StringBuffer();
-		while (tokenizer.hasMoreTokens()) {
-		    String key = tokenizer.nextToken();
-		    data.append(key);
-		    data.append('=');
-		    data.append(req.getParameter(key));
-		    data.append(',');
-		}
-		data.append("signedFieldsPublicSignature=");
-		try {
-			String signedFieldsDigest = getPublicDigest(transactionSignatureFields.trim());
-			log.debug("[signedFieldsDigest]=" + signedFieldsDigest);
-			data.append(signedFieldsDigest);
-			String computedDigest = getPublicDigest(data.toString());
-			log.debug("[computedDigest]="+ computedDigest);
-			return transactionSignature.equals(computedDigest);
+    	String signedFieldNames = req.getParameter("signed_field_names");
+		String signature        = req.getParameter("signature");    
 
+		HashMap<String, String> param = new HashMap<String, String>(22);
+		StringTokenizer tokenizer = new StringTokenizer(signedFieldNames, ",", false);
+
+		while (tokenizer.hasMoreTokens()) {
+			String key = tokenizer.nextToken();
+			param.put(key, req.getParameter(key));
+		}
+		param.put("signature", signature);
+		
+		if (log.isDebugEnabled()){
+			log.debug("[signed_field_names]=" + signedFieldNames);
+			log.debug("[signature]=" + signature);
+		}
+			
+		if (signature == null || signedFieldNames == null) return false;
+	
+		try {
+			String messageContents = signer.composeFields(signedFieldNames, param);
+			log.trace(messageContents);
+			String signedFieldsDigest = signer.getDigest(messageContents);
+			log.debug("[signedFieldsDigest]=" + signedFieldsDigest);
+			return signature.equals(signedFieldsDigest);
 		} catch (InvalidKeyException e) {
 			log.error(e);
 			return false;
@@ -188,7 +139,6 @@ public class CybersourceReceipt extends HttpServlet {
 			return false;
 		}
     }
-	
 	
 	
 	public void doGet(HttpServletRequest req, HttpServletResponse res){
@@ -222,12 +172,15 @@ public class CybersourceReceipt extends HttpServlet {
 			return;
 		}
 
-		String uni = req.getParameter("merchantDefinedData1");
-		String invoiceNumber = req.getParameter("orderNumber");
-		String amount = req.getParameter("orderAmount");
+		String uni = req.getParameter("req_merchant_defined_data1");
+		String invoiceNumber = req.getParameter("req_reference_number");
+		String amount = req.getParameter("req_amount");
 		String decision = req.getParameter("decision");
-		String transactionType = req.getParameter("orderPage_transactionType");
-		String responseCode = req.getParameter("reasonCode");
+		String transactionType = req.getParameter("req_transaction_type");
+		String responseCode = req.getParameter("reason_code");
+		String transactionNumber = req.getParameter("bill_trans_ref_no");
+		String message = req.getParameter("message");
+		
 		
 		float printingDollars = Float.parseFloat(amount) * dollarConvertValue;
 		
@@ -238,9 +191,9 @@ public class CybersourceReceipt extends HttpServlet {
 		}
 		
 		// Quick check to make sure the merchantID and serialNumber agree with the submitted versions
-		if (!merchantID.equals(req.getParameter("merchantID")) ||
-				!serialNumber.equals(req.getParameter("orderPage_serialNumber"))){
-			log.warn("There seems to be a mis-match between the expected merchantID and serialNumber, and the POST");
+		if (!profileId.equals(req.getParameter("req_profile_id")) ||
+				!accessKey.equals(req.getParameter("req_access_key"))){
+			log.warn("There seems to be a mis-match between the expected profile_id and access_key, and the POST");
 			if (!log.isDebugEnabled()) log.warn(req);
 		}		
 			
@@ -286,8 +239,9 @@ public class CybersourceReceipt extends HttpServlet {
 			Element appNode = presentationDOM.createElement("purchaseReceipt");
 			appNode.setAttribute("customerId", uni);
 			appNode.setAttribute("invoiceNumber", invoiceNumber);
+			appNode.setAttribute("transId", transactionNumber);
 			appNode.setAttribute("responseCode", responseCode);
-			//appNode.setAttribute("reasonText", "foo");
+			appNode.setAttribute("reasonText", message);
 			parentNode.appendChild(appNode);
 
 			// The continue URL should be the root URL of this context
@@ -305,7 +259,8 @@ public class CybersourceReceipt extends HttpServlet {
 			Source domSource = new DOMSource(presentationDOM);
 		
 			log.debug("created new Source from the Document Tree");
-		
+			log.trace(presentationDOM);
+			
 			res.setContentType("text/html");
 			PrintWriter out = res.getWriter();
 			Result htmlOutput = new StreamResult(out);

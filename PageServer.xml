@@ -36,17 +36,26 @@
 	<context-param>
 	        <param-name>serialNumber</param-name>
  			<param-value>@SerialNumber@</param-value>
+ 	</context-param>
+ 	
+ 	<context-param>
+ 		<param-name>profileId</param-name>
+ 		<param-value>@ProfileId@</param-value>
+ 	</context-param>
+ 	
+ 	<context-param>
+ 		<param-name>accessKey</param-name>
+ 		<param-value>@AccessKey@</param-value>
  	</context-param>		
  			
  	<context-param>
  	     <param-name>sharedSecret</param-name>
  	     <param-value>@SharedSecret@</param-value>
  	</context-param>
- 	
 	
 	<context-param>
 	   	  <param-name>transactionEncoding</param-name>
-	   	  <param-value>UTF8</param-value>
+	   	  <param-value>UTF-8</param-value>
 	</context-param>
 
 
@@ -103,15 +112,11 @@
 
 	<servlet>
 	   <servlet-name>Purchase</servlet-name>
-	   <servlet-class>edu.columbia.cuit.pageServer.CybersourceGateway</servlet-class>
+	   <servlet-class>edu.columbia.cuit.pageServer.CybersourceSecureAssurance</servlet-class>
 	   <init-param>
-	       <param-name>orderPageURI</param-name>
-	       <param-value>https://orderpage.ic3.com/hop/orderform.jsp</param-value>
+	       <param-name>standardTransactionEndpoint</param-name>
+	       <param-value>@TransactionEndpoint@</param-value>
 	   </init-param>	   
-	   <init-param>
-	       <param-name>testOrderPageURI</param-name>
-	       <param-value>https://orderpagetest.ic3.com/hop/orderform.jsp</param-value>
-	   </init-param>
 	   <init-param>
 	       <param-name>htmlConversionStylesheet</param-name>
 	       <param-value>/cybersource.xslt</param-value>
@@ -127,10 +132,6 @@
 	   <init-param>
 	   	  <param-name>testMode</param-name>
 		  <param-value>@TestMode@</param-value>
-	   </init-param>
-	   <init-param>
-	      <param-name>simpleSigning</param-name>
-	      <param-value>false</param-value>
 	   </init-param>
 	   <load-on-startup>4</load-on-startup>
 	</servlet>
