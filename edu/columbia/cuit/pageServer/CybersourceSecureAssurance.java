@@ -9,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -245,10 +246,7 @@ public class CybersourceSecureAssurance extends HttpServlet {
   		}
   	};
 
-  	private HashSet<String> usPostalAbbreviations;	
-  	private HashSet<String> caPostalAbbreviations;
 
-  	
   	
 	public void init(){
 		log.debug("Initializing " + getServletName());
@@ -283,13 +281,6 @@ public class CybersourceSecureAssurance extends HttpServlet {
 		} catch (TransformerConfigurationException e) {
 			log.error("Unable to compile the template for the CybersourceSecureAssurance", e);
 		}
-
-		usPostalAbbreviations = new HashSet<String>(usStates.size(), 0.2f);
-		usPostalAbbreviations.addAll(usStates.values());
-
-		caPostalAbbreviations = new HashSet<String>(caProvinces.size(), 0.2f);
-		caPostalAbbreviations.addAll(caProvinces.values());
-		
 		
 		pagecontrol = (Pagecontrol) context.getAttribute("pagecontrolDatabase");
 		userinfo = (LDAPUserinfo) context.getAttribute("UserinfoProvider");
@@ -301,116 +292,64 @@ public class CybersourceSecureAssurance extends HttpServlet {
 		
 		log.info("Done with " + getServletName() + " init");
 	}
-	
-	
-	public boolean validateBillTo(Map<String, String> params){
-		// Form data fix-up and validation
-		
-		// First Check for a valid 2-Letter ISO Country Code
-		if ( !isoCountryCodes.contains(params.get("bill_to_address_country").toUpperCase()) ){
-			params.put("bill_to_address_country", "US");
-			return false;
-		}
-		
-
-		// State needs to be a two-letter postal code only
-		if ( params.get("bill_to_address_country").compareToIgnoreCase("US") == 0){
-		   if (!usPostalAbbreviations.contains(params.get("bill_to_address_state").toUpperCase())){
-			   String statename = params.get("bill_to_address_state").toLowerCase();
-			   if ( usStates.containsKey(statename) ){
-				   params.put("bill_to_address_state", usStates.get(statename));
-			   }else{
-				   // An unrecognized US State was used
-				   return false;
-			   }
-		   }
-		}
-
-		// Parallel case for Canadian Provinces, handles both English and French
-		if ( params.get("bill_to_address_country").compareToIgnoreCase("CA") == 0){
-			   if (!caPostalAbbreviations.contains(params.get("bill_to_address_state").toUpperCase())){
-				   String statename = params.get("bill_to_address_state").toLowerCase();
-				   if ( caProvinces.containsKey(statename) ){
-					   params.put("bill_to_address_state", caProvinces.get(statename));
-				   }else{
-					   // An unrecognized Canadian Province was used
-					   return false;
-				   }
-			   }
-			}
-		
-		
-		// specify phone number only as a 10-digit number
-		if ( params.get("bill_to_phone").length() != 10 ){
-			String phone = params.get("bill_to_phone").replaceAll("[- )(+]", "");
-			if ( phone.length() >= 10 ){
-				params.put("bill_to_phone", phone);
-			}else{
-				return false;
-			}
-		}
-		
-		if (params.get("bill_to_address_line1").isEmpty() || params.get("bill_to_address_city").isEmpty() ||
-		    params.get("bill_to_address_postal_code").isEmpty() || params.get("bill_to_address_country").isEmpty() ){
-		    	return false;
-		}
-		    
-		return true;
-	}
-		
-		
+				
 		  
 	private DocumentFragment generateFormFields(Document parentDoc, HttpServletRequest req, Boolean doSigning){		
-		Map<String, String> formData = new LinkedHashMap<String,String>(32);
 		Map<String, String> preFormat = new HashMap<String, String>(32);
+		Map<String, String> formData = new LinkedHashMap<String,String>(32);
 		Map<String, String> postFormat = new HashMap<String, String>(32);
-		HashSet<String> hiddenField = new HashSet<String>(32);
         String uni = req.getRemoteUser();
         
         
-        // The atrociously named "size" is the parameter corresponding to the
-        // selected purchaseQuantity
-        int size;
-	    try {
-			size = Integer.valueOf(req.getParameter("size"));
-		}catch (NumberFormatException e){
-			log.error("Unable to parse size param for value, using 0");
-			size = 0;
-		}
-
+        int size = 0;
+        if (!doSigning){
+        	// The atrociously named "size" is the parameter corresponding to the
+        	// selected purchaseQuantity but is only used on the initial post
+        	try {
+        		size = Integer.valueOf(req.getParameter("size"));
+        	}catch (NumberFormatException e){
+        		log.error("Unable to parse size param for value, using 0");
+        	}
+        }
 			
 		DocumentFragment formParent = parentDoc.createDocumentFragment();
 
 		//Setup the default values for the the first-stage form
-		String transactionUUID;
-		String formattedUTCDateTime;
-		String referenceId;
-		String forename;
-		String surname;
-		String email;
-		String phone = "";
-		String line1 ="";
-		String city = "";
-		String state = "";
+		String forename = "";
+		String surname  = "";
+		String email    = "";
+		String phone    = "";
+		String line1    = "";
+		String city     = "";
+		String state    = "";
 		String postalCode ="";
-		String country = "US";
-		String transactionType = "sale";
-		String amount = null;
+		String country    = "US";
+		String amount     = null;
 		
 		if (doSigning){
-			    transactionUUID = req.getParameter("transaction_uuid");
-			    formattedUTCDateTime = req.getParameter("signed_date_time");
-			    referenceId = req.getParameter("reference_number");
-			    amount   = req.getParameter("amount");
-			    forename = req.getParameter("bill_to_forename");
+				forename = req.getParameter("bill_to_forename");
 				surname  = req.getParameter("bill_to_surname");
 				email    = req.getParameter("bill_to_email");
+				amount   = req.getParameter("amount");
 				phone    = req.getParameter("bill_to_phone");
 				line1    = req.getParameter("bill_to_address_line1");
 				city     = req.getParameter("bill_to_address_city");
 				state    = req.getParameter("bill_to_address_state");
 				country  = req.getParameter("bill_to_address_country");
 				postalCode   = req.getParameter("bill_to_address_postal_code");
+
+				// Postal code fixup to ensure only a two-letter abbreviation
+				// for US and Canadian locations
+				if ( (country.compareToIgnoreCase("US") == 0) &&
+				   usStates.containsKey(state.toLowerCase()) ){
+					  log.info("Replacing full US state name with postal abbreviation");
+					  state = usStates.get(state.toLowerCase());
+				}else if ( (country.compareToIgnoreCase("CA") == 0) &&
+				   caProvinces.containsKey(state.toLowerCase()) ){
+					  log.info("Replacing full Candian province name with postal abbreviation");
+					  state = caProvinces.get(state.toLowerCase());
+				}
+				
 		}else{
 		   Map<String, String> info;
 		   try {
@@ -421,46 +360,11 @@ public class CybersourceSecureAssurance extends HttpServlet {
 				info.put("givenName","");
 				info.put("mail", uni + "@columbia.edu");
 			}
-		    transactionUUID = UUID.randomUUID().toString();
-		    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-		    sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
-		    formattedUTCDateTime = sdf.format(new Date());
-			referenceId = pagecontrol.nextSaleId();
-			forename = (info.containsKey("givenName"))? info.get("givenName") : "";
-			surname = (info.containsKey("sn"))? info.get("sn") : "";
-			email = (info.containsKey("mail"))? info.get("mail") : uni + "@columbia.edu";
+			forename =  (info.containsKey("givenName"))? info.get("givenName") : "";
+			surname  =  (info.containsKey("sn"))? info.get("sn") : "";
+			email =  (info.containsKey("mail"))? info.get("mail") : uni + "@columbia.edu";
 		}
 
-		if (log.isDebugEnabled()){
-			StringBuilder sb = new StringBuilder("secureAssuranceValues: { ");
-			sb.append("referenceId:\"");
-			sb.append(referenceId);
-			sb.append("\" transactionUUID:\"");
-			sb.append(transactionUUID);
-			sb.append("\" formattedUTCDateTime:\"");
-			sb.append(formattedUTCDateTime);
-			sb.append("\" forename:\"");
-			sb.append(forename);
-			sb.append("\" surname:\"");
-			sb.append(surname);
-			sb.append("\" email:\"");
-			sb.append(email);
-			sb.append("\" phone:\"");
-			sb.append(phone);
-			sb.append("\" line1:\"");
-			sb.append(line1);
-			sb.append("\" city:\"");
-			sb.append(city);
-			sb.append("\" state:\"");
-			sb.append(state);
-			sb.append("\" country:\"");
-			sb.append(country);
-			sb.append("\" postalCode:\"");
-			sb.append(postalCode);
-			sb.append(" }");
-			log.debug(sb.toString());
-		}
-		
 		
 		try {
 			
@@ -468,7 +372,7 @@ public class CybersourceSecureAssurance extends HttpServlet {
 				NumberFormat decimalFormat = NumberFormat.getInstance();
 				decimalFormat.setMinimumFractionDigits(2);
 				decimalFormat.setMaximumFractionDigits(2);
-			    amount = decimalFormat.format(size);	
+			    amount = decimalFormat.format(size);
 			}
 			
 			formData.put("bill_to_forename", forename);
@@ -506,64 +410,14 @@ public class CybersourceSecureAssurance extends HttpServlet {
 			formData.put("bill_to_address_country", country);
 			preFormat.put("bill_to_address_country", " Country Code:");
 			postFormat.put("bill_to_address_country", "  ");
-			
-			
-			// These form fields should be hidden and pre-populated
-			// with previously specified data from the POST or config
-			formData.put("profile_id", profileId);
-			hiddenField.add("profile_id");
 						
-			formData.put("access_key", accessKey);
-			hiddenField.add("access_key");
-
-			formData.put("transaction_uuid", transactionUUID);
-			hiddenField.add("transaction_uuid");
-
-			formData.put("signed_date_time", formattedUTCDateTime);
-			hiddenField.add("signed_date_time");
-			
-			formData.put("reference_number", referenceId);
-			hiddenField.add("reference_number");
-			
-			formData.put("transaction_type", transactionType);
-			hiddenField.add("transaction_type");
-			
-			formData.put("amount", amount);
-			hiddenField.add("amount");
-			
-			formData.put("currency", currency);
-			hiddenField.add("currency");
-			
-			formData.put("signed_field_names", signedFields);
-			hiddenField.add("signed_field_names");
-			
-			formData.put("payment_method", paymentMethod);
-			hiddenField.add("payment_method");
-			
-			formData.put("unsigned_field_names", unsignedFields);
-			hiddenField.add("unsigned_field_names");
-					
-			formData.put("locale", "en");
-			hiddenField.add("locale");
-			
-			formData.put("merchant_defined_data1", uni);
-			hiddenField.add("merchant_defined_data1");
-
-			
-			// clean up entered Data and abort signing if
-			// there are missing fields
-			if (doSigning && validateBillTo(formData) == false){
-				doSigning = false;
-			}
 			
 			for (String field: formData.keySet()){
 				Element fieldNode = parentDoc.createElement("field");
 				fieldNode.setAttribute("name", field);
 				fieldNode.setAttribute("value", formData.get(field));
 
-				if (hiddenField.contains(field)){
-					fieldNode.setAttribute("hidden", "true");
-				}else if (doSigning){
+				if (doSigning){
 					fieldNode.setAttribute("displayOnly", "true");
 				}
 				if (preFormat.containsKey(field)){
@@ -576,7 +430,7 @@ public class CybersourceSecureAssurance extends HttpServlet {
 			}
 			
 			if (doSigning){
-			   sign(parentDoc, formParent, formData);
+			   sign(parentDoc, formParent, formData, uni, amount);
 			   Element unsignedNode = parentDoc.createElement("field");
 			   unsignedNode.setAttribute("name", "card_type");
 			   formParent.appendChild(unsignedNode);
@@ -591,6 +445,12 @@ public class CybersourceSecureAssurance extends HttpServlet {
 			   unsignedNode.setAttribute("pre", "Expires (format: MM-YYYY)");
 			   unsignedNode.setAttribute("post", "<br/><br/>");
 			   formParent.appendChild(unsignedNode);
+			}else{
+			   Element amountFieldNode = parentDoc.createElement("field");
+			   amountFieldNode.setAttribute("name", "amount");
+			   amountFieldNode.setAttribute("value", amount);
+			   amountFieldNode.setAttribute("hidden", "true");
+			   formParent.appendChild(amountFieldNode);
 			}
 			
 		} catch (InvalidKeyException e) {
@@ -609,12 +469,111 @@ public class CybersourceSecureAssurance extends HttpServlet {
 		
 		
 		
-	public void sign(Document parentDoc, Node formParent, Map<String, String> formData) throws
+	@SuppressWarnings("unchecked")
+	public void sign(Document parentDoc, Node formParent, Map<String, String> formData, String uni, String amount) throws
 						InvalidKeyException, NoSuchAlgorithmException, UnsupportedEncodingException, IllegalStateException{	
+
+		LinkedHashMap<String, String> fields = new LinkedHashMap<String, String>();
+		fields.putAll(formData);
+
+		Element profileIdNode = parentDoc.createElement("field");
+		profileIdNode.setAttribute("name", "profile_id");
+		profileIdNode.setAttribute("value", profileId);
+		profileIdNode.setAttribute("hidden", "true");
+		formParent.appendChild(profileIdNode);
+		fields.put("profile_id", profileId);
 		
-		String data = signer.composeFields(signedFields, formData);		
+		Element transactionUUIDNode = parentDoc.createElement("field");
+		String transactionUUID = UUID.randomUUID().toString();
+		transactionUUIDNode.setAttribute("name", "transaction_uuid");
+		transactionUUIDNode.setAttribute("value", transactionUUID);
+		transactionUUIDNode.setAttribute("hidden", "true");
+		formParent.appendChild(transactionUUIDNode);
+		fields.put("transaction_uuid", transactionUUID);
+		
+		Element accessKeyNode = parentDoc.createElement("field");
+		accessKeyNode.setAttribute("name", "access_key");
+		accessKeyNode.setAttribute("value", accessKey);
+		accessKeyNode.setAttribute("hidden", "true");
+		formParent.appendChild(accessKeyNode);
+		fields.put("access_key", accessKey);
+		
+		Element signedDateTimeNode = parentDoc.createElement("field");
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+		sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+		String formattedUTCDateTime = sdf.format(new Date());
+		signedDateTimeNode.setAttribute("name", "signed_date_time");
+	    signedDateTimeNode.setAttribute("value", formattedUTCDateTime);
+	    signedDateTimeNode.setAttribute("hidden", "true");
+	    formParent.appendChild(signedDateTimeNode);
+	    fields.put("signed_date_time", formattedUTCDateTime);
+	    
+	    String referenceId = pagecontrol.nextSaleId();
+	    Element referenceIdNode = parentDoc.createElement("field");
+	    referenceIdNode.setAttribute("name", "reference_number");
+	    referenceIdNode.setAttribute("value", referenceId);
+	    referenceIdNode.setAttribute("hidden", "true");
+	    formParent.appendChild(referenceIdNode);
+	    fields.put("reference_number", referenceId);
+	    
+	    Element transactionTypeNode = parentDoc.createElement("field");
+	    transactionTypeNode.setAttribute("name", "transaction_type");
+	    transactionTypeNode.setAttribute("value", "sale");
+	    transactionTypeNode.setAttribute("hidden", "true");
+	    formParent.appendChild(transactionTypeNode);
+	    fields.put("transaction_type", "sale");
+		
+	    Element currencyNode = parentDoc.createElement("field");
+	    currencyNode.setAttribute("name", "currency");
+	    currencyNode.setAttribute("value", currency);
+	    currencyNode.setAttribute("hidden", "true");
+	    formParent.appendChild(currencyNode);
+	    fields.put("currency", currency);
+	    
+	    Element amountNode = parentDoc.createElement("field");
+	    amountNode.setAttribute("name", "amount");
+	    amountNode.setAttribute("value", amount);
+	    amountNode.setAttribute("hidden", "true");
+	    formParent.appendChild(amountNode);
+	    fields.put("amount", amount);
+	    
+	    Element signedFieldNamesNode = parentDoc.createElement("field");
+	    signedFieldNamesNode.setAttribute("name", "signed_field_names");
+	    signedFieldNamesNode.setAttribute("value", signedFields);
+	    signedFieldNamesNode.setAttribute("hidden", "true");
+	    formParent.appendChild(signedFieldNamesNode);
+	    fields.put("signed_field_names", signedFields);
+	    
+	    Element paymentMethodNode = parentDoc.createElement("field");
+	    paymentMethodNode.setAttribute("name", "payment_method");
+	    paymentMethodNode.setAttribute("value", paymentMethod);
+	    paymentMethodNode.setAttribute("hidden", "true");
+	    formParent.appendChild(paymentMethodNode);
+	    fields.put("payment_method", paymentMethod);
+
+	    Element unsignedFieldNamesNode = parentDoc.createElement("field");
+	    unsignedFieldNamesNode.setAttribute("name", "unsigned_field_names");
+	    unsignedFieldNamesNode.setAttribute("value", unsignedFields);
+	    unsignedFieldNamesNode.setAttribute("hidden", "true");
+	    formParent.appendChild(unsignedFieldNamesNode);
+	    fields.put("unsigned_field_names", unsignedFields);
+	    
+	    Element localeNode = parentDoc.createElement("field");
+	    localeNode.setAttribute("name", "locale");
+	    localeNode.setAttribute("value", "en");
+	    localeNode.setAttribute("hidden", "true");
+	    formParent.appendChild(localeNode);
+	    fields.put("locale", "en");
+	    
+	    Element merchantDefinedData1Node = parentDoc.createElement("field");
+	    merchantDefinedData1Node.setAttribute("name", "merchant_defined_data1");
+	    merchantDefinedData1Node.setAttribute("value", uni);
+	    formParent.appendChild(merchantDefinedData1Node);
+	    fields.put("merchant_defined_data1", uni);
+	    
+		String data = signer.composeFields(signedFields, fields);		
 		String signature = signer.getDigest(data);
-							
+		
 		Element signatureNode = parentDoc.createElement("field");
 		signatureNode.setAttribute("name", "signature");
 		signatureNode.setAttribute("id", "signature");
@@ -647,29 +606,28 @@ public class CybersourceSecureAssurance extends HttpServlet {
 				// Use the inclusion of the signed_field_names parameter to check if this is
 				// the signed or unsigned form generation stage
 				//
-				if (req.getParameter("signed_field_names") != null){	
+				
+				if (req.getParameter("bill_to_surname") != null){
+					log.debug("creating the final form, for unsigned submission");
+					formfields.appendChild(generateFormFields(presentationDOM, req, true));
+					purchaseAmount.setAttribute("value", req.getParameter("amount"));	
 					appNode = presentationDOM.createElement("unsignedForm");
 					targetURL.setAttribute("href", standardEndpointURI);
 					logoutURL.setAttribute("href", req.getRequestURL().toString() + "?logout=true");
-					purchaseAmount.setAttribute("value", req.getParameter("amount"));
-					
-					formfields.appendChild(generateFormFields(presentationDOM, req, true));
-							
 				}else{
+					log.debug("creating the intermediate form for billing info");
+					formfields.appendChild(generateFormFields(presentationDOM, req, false));
+					purchaseAmount.setAttribute("value", req.getParameter("size"));
 					appNode = presentationDOM.createElement("signedForm");
 					targetURL.setAttribute("href", req.getRequestURL().toString());
 					logoutURL.setAttribute("href", req.getRequestURL().toString() + "?logout=true");
-					purchaseAmount.setAttribute("value", req.getParameter("size"));
-					
-					formfields.appendChild(generateFormFields(presentationDOM, req, false));
 				}
-
+				
 				if (appNode != null){
 					parentNode.appendChild(appNode);
 					appNode.appendChild(targetURL);
 					appNode.appendChild(logoutURL);
-					appNode.appendChild(formfields);	
-					
+					appNode.appendChild(formfields);
 					appNode.appendChild(purchaseAmount);
 				}else{
 					log.error("appNode Element was not created");

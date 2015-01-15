@@ -95,18 +95,6 @@
 		     <param-name>overrideRootLogger</param-name>
 		     <param-value>true</param-value>
 		</init-param>
-		<init-param>
-			<param-name>legacyPcdAdapter</param-name>
-			<param-value>edu.columbia.cuit.pageServer.Pcd</param-value>
-		</init-param>
-		<init-param>
-		   <param-name>pcdPort</param-name>
-		   <param-value>7775</param-value>
-		</init-param>
-		<init-param>
-		   <param-name>pcdBacklog</param-name>
-		   <param-value>12</param-value>
-		</init-param>
 		<load-on-startup>0</load-on-startup>
     </servlet>
 
